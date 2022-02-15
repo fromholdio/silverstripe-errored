@@ -2,6 +2,7 @@
 
 namespace Fromholdio\Errored\Extensions;
 
+use Fromholdio\Errored\Errored;
 use SilverStripe\Control\Director;
 use SilverStripe\Control\HTTPResponse_Exception;
 use SilverStripe\Core\Extension;
