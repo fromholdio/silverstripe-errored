@@ -1,6 +1,6 @@
 <?php
 
-namespace Fromholdio\Errored\Extensions;
+namespace Fromholdio\Errored;
 
 use SilverStripe\Assets\File;
 use SilverStripe\Assets\Storage\GeneratedAssetHandler;
