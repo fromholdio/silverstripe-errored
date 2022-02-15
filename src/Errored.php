@@ -184,7 +184,9 @@ class Errored extends Controller
     public function writeStaticFile(): bool
     {
         try {
-            $content = $this->getResponseBody();
+            $content = Member::actAs(null, function () {
+                return $this->getResponseBody();
+            });
             $storeFileName = $this->getStoreStaticFileName();
             $this->getAssetHandler()->setContent($storeFileName, $content);
         }
