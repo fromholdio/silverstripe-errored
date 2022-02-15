@@ -2,7 +2,7 @@
 
 namespace Fromholdio\Errored\Tasks;
 
-use Fromholdio\Errored\Extensions\Errored;
+use Fromholdio\Errored\Errored;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Dev\BuildTask;
 

@@ -3,9 +3,18 @@ Name: fio-errored
 ---
 SilverStripe\Core\Injector\Injector:
   Fromholdio\Errored\Extensions\Errored:
+    class: Fromholdio\Errored\Extensions\Errored
     properties:
       AssetHandler: '%$SilverStripe\Assets\Storage\GeneratedAssetHandler'
 
 SilverStripe\Control\Controller:
   extensions:
     fioErrored: Fromholdio\Errored\Extensions\ControllerExtension
+
+#Fromholdio\Errored\Errored:
+#  dev_append_error_message: true
+#  page_class: null
+#  themes:
+#    - '$public'
+#    - 'silverstripe/login-forms:login-forms'
+#    - '$default'

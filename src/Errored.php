@@ -28,27 +28,38 @@ class Errored extends Controller
     protected ?string $errorMessage;
     protected ?string $userMessage;
 
-    protected GeneratedAssetHandler $assetHandler;
+    protected ?GeneratedAssetHandler $assetHandler;
+
+    private static $dependencies = [
+        'assetHandler' => '%$' . GeneratedAssetHandler::class
+    ];
 
     private static $is_static_file_enabled = true;
+    private static $static_file_path = 'errors';
 
-    private static $dev_append_error_message = false;
+    private static $dev_append_error_message = true;
 
     private static $page_class = \Page::class;
     private static $themes;
 
+    private static $casting = [
+        'Title' => 'Varchar',
+        'Content' => 'HTMLText'
+    ];
+
     public static function getResponseFor(
         $statusCode,
-        $errorMessage = null,
-        ?HTTPRequest $request = null
+        ?HTTPRequest $request = null,
+        $errorMessage = null
     ): ?HTTPResponse
     {
-        $controller = static::create($statusCode, $errorMessage);
+        $errored = static::create($statusCode, $request, $errorMessage);
         try {
-            $body = $controller->getResponseBody();
+            $body = $errored->getResponseBody();
         }
         catch (\Throwable $throwable) {
-            $body = $controller->getStaticResponseBody();
+            throw $throwable;
+            $body = $errored->getStaticResponseBody();
         }
         if (!empty($body)) {
             /** @var HTTPResponse $response */
@@ -93,9 +104,8 @@ class Errored extends Controller
         ];
     }
 
-
     public function __construct(
-        int $statusCode,
+        int $statusCode = 0,
         ?HTTPRequest $request = null,
         ?string $errorMessage = null,
         ?string $userMessage = null
@@ -103,6 +113,7 @@ class Errored extends Controller
         $this->statusCode = $statusCode;
         $this->errorMessage = $errorMessage;
         $this->userMessage = $userMessage;
+        $this->assetHandler = null;
         parent::__construct();
     }
 
@@ -172,35 +183,14 @@ class Errored extends Controller
 
     public function writeStaticFile(): bool
     {
-        $ogThemes = SSViewer::get_themes();
-        Requirements::clear();
-        Requirements::clear_combined_files();
         try {
-            $themes = $this->getThemes() ?? $ogThemes;
-            SSViewer::set_themes($themes);
-            $response = Member::actAs(null, function () {
-                return Director::mockRequest(
-                    function (HTTPRequest $request) {
-                        $request->setScheme('https');
-                        return Director::singleton()->handleRequest($request);
-                    },
-                    '/'
-                );
-            });
-            $content = $response->getBody();
+            $content = $this->getResponseBody();
+            $storeFileName = $this->getStoreStaticFileName();
+            $this->getAssetHandler()->setContent($storeFileName, $content);
         }
-        finally {
-            SSViewer::set_themes($ogThemes);
-            Requirements::clear();
-            Requirements::clear_combined_files();
-        }
-
-        if (empty($content)) {
+        catch (\Throwable $throw) {
             return false;
         }
-
-        $storeFileName = $this->getStoreStaticFileName();
-        $this->getAssetHandler()->setContent($storeFileName, $content);
         return true;
     }
 
@@ -216,7 +206,7 @@ class Errored extends Controller
         return $name;
     }
 
-    protected function getStaticFilePath(): string
+    protected function getStaticFilePath(): ?string
     {
         $path = static::config()->get('static_file_path');
         $this->extend('updateStaticFilePath', $path);
@@ -237,10 +227,29 @@ class Errored extends Controller
      * ----------------------------------------------------
      */
 
+    protected function getResponseTemplates(): array
+    {
+        $templates = $this->getTemplates();
+
+        $page = $this->getResponsePage();
+        if (!is_null($page)) {
+            $pageTemplates = SSViewer::get_templates_by_class(
+                $page::class, '', SiteTree::class
+            );
+            $templates = array_merge($templates, $pageTemplates);
+        }
+
+        $templates[] = 'Security';
+        $templates[] = 'BlankPage';
+
+        $this->extend('updateResponseTemplates', $templates);
+        return $templates;
+    }
+
     public function getResponseBody(?HTTPRequest $request = null): string
     {
         $controller = $this->getResponsePageController($request);
-        $templates = $this->getTemplates();
+        $templates = $this->getResponseTemplates();
         $themes = $this->getThemes();
 
         if (!empty($themes)) {
@@ -259,43 +268,6 @@ class Errored extends Controller
         $storeFileName = $this->getStoreStaticFileName();
         $body = $this->getAssetHandler()->getContent($storeFileName);
         return empty($body) ? null : $body;
-    }
-
-
-    /**
-     * Response content
-     * ----------------------------------------------------
-     */
-
-    protected function getTitles()
-    {
-        return static::getCodes();
-    }
-
-    public function getTitle(): ?string
-    {
-        $title = $this->getTitles()[$this->getStatusCode()] ?? null;
-        $this->extend('updateTitle', $title);
-        return $title;
-    }
-
-    public function getContent(): ?string
-    {
-        $templates = $this->getTemplates('_Content');
-        $content = $this->renderWith($templates)->forTemplate();
-        $showDevMessage = (bool) static::config()->get('dev_append_error_message');
-        $message = $this->getErrorMessage();
-        if (!empty($message) && Director::isDev() && $showDevMessage === true) {
-            $content .= "\n<p><b>Error detail: "
-                . Convert::raw2xml($message) ."</b></p>";
-        }
-        return $content;
-    }
-
-    public function ContentLocale(): string
-    {
-        $locale = i18n::get_locale();
-        return i18n::convert_rfc1766($locale);
     }
 
 
@@ -366,7 +338,54 @@ class Errored extends Controller
 
 
     /**
-     * Response templates/themes
+     * Response content
+     * ----------------------------------------------------
+     */
+
+    protected function getTitles()
+    {
+        return static::getCodes();
+    }
+
+    public function getTitle(): ?string
+    {
+        $title = $this->getTitles()[$this->getStatusCode()] ?? null;
+        if (empty($title)) {
+            $title = _t(self::class . '.ERRORHASOCCURED', 'An error has occurred');
+        }
+        $this->extend('updateTitle', $title);
+        return $title;
+    }
+
+    protected function getContentTemplates(): array
+    {
+        $templates = $this->getTemplates('_Content');
+        $this->extend('updateContentTemplates', $templates);
+        return $templates;
+    }
+
+    public function getContent(): ?string
+    {
+        $templates = $this->getContentTemplates();
+        $content = $this->renderWith($templates)->forTemplate();
+        $showDevMessage = (bool) static::config()->get('dev_append_error_message');
+        $message = $this->getErrorMessage();
+        if (!empty($message) && Director::isDev() && $showDevMessage === true) {
+            $content .= "\n<p><b>Error detail: "
+                . Convert::raw2xml($message) ."</b></p>";
+        }
+        return $content;
+    }
+
+    public function ContentLocale(): string
+    {
+        $locale = i18n::get_locale();
+        return i18n::convert_rfc1766($locale);
+    }
+
+
+    /**
+     * Templates/themes
      * ----------------------------------------------------
      */
 
@@ -388,21 +407,9 @@ class Errored extends Controller
             static::class, $suffix, __CLASS__
         );
 
-        $templates[] = [
-            'Error' . $statusCodeSuffix,
-            'Error' . $xStatusCodeSuffix,
-            'Error'
-        ];
-
-        $page = $this->getResponsePage();
-        if (!is_null($page)) {
-            $templates[] = SSViewer::get_templates_by_class(
-                $page::class, '', SiteTree::class
-            );
-        }
-
-        $templates[] = ['BlankPage'];
-        return array_merge(...$templates);
+        $templates = array_merge(...$templates);
+        $this->extend('updateTemplates', $templates);
+        return $templates;
     }
 
     protected function getThemes(): ?array
@@ -422,14 +429,15 @@ class Errored extends Controller
      * ----------------------------------------------------
      */
 
-    public function getAssetHandler(): GeneratedAssetHandler
+    public function getAssetHandler(): ?GeneratedAssetHandler
     {
         return $this->assetHandler;
     }
 
-    public function setAssetHandler(GeneratedAssetHandler $handler)
+    public function setAssetHandler(GeneratedAssetHandler $handler): self
     {
         $this->assetHandler = $handler;
+        return $this;
     }
 
 
