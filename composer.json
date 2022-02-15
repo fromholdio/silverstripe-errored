@@ -17,6 +17,9 @@
     "silverstripe/vendor-plugin": "^1.0",
     "silverstripe/cms": "^4.10.0"
   },
+  "replace": {
+    "silverstripe/errorpage":"*"
+  },
   "autoload": {
     "psr-4": {
       "Fromholdio\\Errored\\": "src/"
