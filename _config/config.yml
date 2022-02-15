@@ -1,0 +1,11 @@
+---
+Name: fio-errored
+---
+SilverStripe\Core\Injector\Injector:
+  Fromholdio\Errored\Extensions\Errored:
+    properties:
+      AssetHandler: '%$SilverStripe\Assets\Storage\GeneratedAssetHandler'
+
+SilverStripe\Control\Controller:
+  extensions:
+    fioErrored: Fromholdio\Errored\Extensions\ControllerExtension
