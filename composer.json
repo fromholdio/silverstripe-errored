@@ -1,0 +1,27 @@
+{
+  "name": "fromholdio/silverstripe-errored",
+  "type": "silverstripe-vendormodule",
+  "description": "Alternate handling of displaying http errors",
+  "license": "BSD-3-Clause",
+  "keywords": ["silverstripe", "errors", "dev"],
+  "homepage": "https://github.com/fromholdio/silverstripe-errored",
+  "support": {
+    "issues": "https://github.com/fromholdio/silverstripe-errored/issues"
+  },
+  "authors": [{
+    "name": "Luke Fromhold",
+    "homepage": "https://fromhold.io"
+  }],
+  "require": {
+    "php": "^7.3 || ^8.0",
+    "silverstripe/vendor-plugin": "^1.0",
+    "silverstripe/cms": "^4.10.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "Fromholdio\\Errored\\": "src/"
+    }
+  },
+  "prefer-stable": true,
+  "minimum-stability": "dev"
+}
