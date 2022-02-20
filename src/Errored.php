@@ -58,7 +58,6 @@ class Errored extends Controller
             $body = $errored->getResponseBody();
         }
         catch (\Throwable $throwable) {
-            throw $throwable;
             $body = $errored->getStaticResponseBody();
         }
         if (!empty($body)) {
