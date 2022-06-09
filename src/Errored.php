@@ -14,15 +14,15 @@ use SilverStripe\Control\HTTPResponse;
 use SilverStripe\Control\NullHTTPRequest;
 use SilverStripe\Control\Session;
 use SilverStripe\Core\Convert;
+use SilverStripe\Core\Flushable;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\i18n\i18n;
 use SilverStripe\ORM\DB;
 use SilverStripe\Security\InheritedPermissions;
 use SilverStripe\Security\Member;
-use SilverStripe\View\Requirements;
 use SilverStripe\View\SSViewer;
 
-class Errored extends Controller
+class Errored extends Controller implements Flushable
 {
     protected int $statusCode;
     protected ?string $errorMessage;
@@ -149,6 +149,11 @@ class Errored extends Controller
      * Static file generation
      * ----------------------------------------------------
      */
+
+    public static function flush()
+    {
+        self::writeAllStaticErrors(true);
+    }
 
     public static function writeAllStaticErrors(bool $forceWrite = false): void
     {
