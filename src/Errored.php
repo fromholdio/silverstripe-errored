@@ -2,8 +2,6 @@
 
 namespace Fromholdio\Errored;
 
-use SilverStripe\Assets\File;
-use SilverStripe\Assets\Storage\GeneratedAssetHandler;
 use SilverStripe\CMS\Controllers\ContentController;
 use SilverStripe\CMS\Controllers\ModelAsController;
 use SilverStripe\CMS\Model\SiteTree;
@@ -16,11 +14,13 @@ use SilverStripe\Control\Session;
 use SilverStripe\Core\Convert;
 use SilverStripe\Core\Flushable;
 use SilverStripe\Core\Injector\Injector;
+use SilverStripe\Core\Path;
 use SilverStripe\i18n\i18n;
 use SilverStripe\ORM\DB;
 use SilverStripe\Security\InheritedPermissions;
 use SilverStripe\Security\Member;
 use SilverStripe\View\SSViewer;
+use Symfony\Component\Filesystem\Filesystem;
 
 class Errored extends Controller implements Flushable
 {
@@ -28,14 +28,8 @@ class Errored extends Controller implements Flushable
     protected ?string $errorMessage;
     protected ?string $userMessage;
 
-    protected ?GeneratedAssetHandler $assetHandler;
-
-    private static $dependencies = [
-        'assetHandler' => '%$' . GeneratedAssetHandler::class
-    ];
-
     private static $is_static_file_enabled = true;
-    private static $static_file_path = 'errors';
+    private static $static_file_path = '_errors';
 
     private static $dev_append_error_message = true;
 
@@ -112,7 +106,6 @@ class Errored extends Controller implements Flushable
         $this->statusCode = $statusCode;
         $this->errorMessage = $errorMessage;
         $this->userMessage = $userMessage;
-        $this->assetHandler = null;
         parent::__construct();
     }
 
@@ -191,8 +184,13 @@ class Errored extends Controller implements Flushable
             $content = Member::actAs(null, function () {
                 return $this->getResponseBody();
             });
-            $storeFileName = $this->getStoreStaticFileName();
-            $this->getAssetHandler()->setContent($storeFileName, $content);
+
+            $fs = new Filesystem();
+            $fs->mkdir($this->getStoreStaticPath());
+            $fs->dumpFile(
+                $this->getStoreStaticFileName(),
+                $content
+            );
         }
         catch (\Throwable $throw) {
             return false;
@@ -219,10 +217,18 @@ class Errored extends Controller implements Flushable
         return $path;
     }
 
+    protected function getStoreStaticPath(): string
+    {
+        return Path::join(
+            PUBLIC_PATH,
+            $this->getStaticFilePath()
+        );
+    }
+
     protected function getStoreStaticFileName(): string
     {
-        return File::join_paths(
-            $this->getStaticFilePath(),
+        return Path::join(
+            $this->getStoreStaticPath(),
             $this->getStaticFileName()
         );
     }
@@ -272,7 +278,7 @@ class Errored extends Controller implements Flushable
     public function getStaticResponseBody(): ?string
     {
         $storeFileName = $this->getStoreStaticFileName();
-        $body = $this->getAssetHandler()->getContent($storeFileName);
+        $body = file_get_contents($storeFileName);
         return empty($body) ? null : $body;
     }
 
@@ -290,25 +296,44 @@ class Errored extends Controller implements Flushable
         {
             $controller = ModelAsController::controller_for($page);
             if (is_null($request)) {
-                $request = new NullHTTPRequest();
+                $request = $this->getRequest();
                 $request->setSession(new Session([]));
             }
             $controller->setRequest($request);
             $controller->doInit();
+            $controller->pushCurrent();
         }
         $this->extend('updateResponsePageController', $controller, $request);
         return $controller;
     }
 
+    public function getRequest(): ?HTTPRequest
+    {
+        // Support Security::singleton() where a request isn't always injected
+        $request = parent::getRequest();
+        if (!is_null($request)) {
+            return $request;
+        }
+
+        $nullRequest = new NullHTTPRequest();
+        if (Controller::has_curr()) {
+            $curr = Controller::curr();
+            if ($curr !== $this) {
+                return $curr->getRequest() ?? $nullRequest;
+            }
+        }
+        return $nullRequest;
+    }
+
     public function getResponsePage(): ?SiteTree
     {
         $class = $this->getResponsePageClass();
-        if (empty($class)) {
+        if (empty($class) || !class_exists($class)) {
             return null;
         }
         $page = Injector::inst()->create($class);
         $page->URLSegment = 'error';
-        $page->ID = '-' . $this->getStatusCode();
+        $page->ID = -1 * $this->getStatusCode();
         $page->Title = $this->getTitle();
         $page->Content = $this->getContent();
         $page->CanViewType = InheritedPermissions::ANYONE;
@@ -427,26 +452,6 @@ class Errored extends Controller implements Flushable
         }
         return $themes;
     }
-
-
-
-    /**
-     * Asset handler
-     * ----------------------------------------------------
-     */
-
-    public function getAssetHandler(): ?GeneratedAssetHandler
-    {
-        return $this->assetHandler;
-    }
-
-    public function setAssetHandler(GeneratedAssetHandler $handler): self
-    {
-        $this->assetHandler = $handler;
-        return $this;
-    }
-
-
 
     /**
      * Minimal implementation:
