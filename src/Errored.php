@@ -150,29 +150,28 @@ class Errored extends Controller implements Flushable
 
     public static function writeAllStaticErrors(bool $forceWrite = false): void
     {
-        $codes = static::getCodes();
-        foreach ($codes as $code => $title)
-        {
-            $errored = static::create($code);
-            $staticExists = $errored->hasStaticFile();
-            if ($forceWrite || !$staticExists)
-            {
-                $action = $staticExists ? 'refreshed' : 'created';
-                $write = $errored->writeStaticFile();
-                if ($write) {
-                    DB::alteration_message(
-                        sprintf('%s error document %s', $code, $action),
-                        'created'
-                    );
-                }
-                else {
-                    DB::alteration_message(
-                        sprintf(
-                            '%s error document could not be %s. Please check permissions',
-                            $code, $action
-                        ),
-                        'error'
-                    );
+        if (static::config()->get('is_static_file_enabled')) {
+            $codes = static::getCodes();
+            foreach ($codes as $code => $title) {
+                $errored = static::create($code);
+                $staticExists = $errored->hasStaticFile();
+                if ($forceWrite || !$staticExists) {
+                    $action = $staticExists ? 'refreshed' : 'created';
+                    $write = $errored->writeStaticFile();
+                    if ($write) {
+                        DB::alteration_message(
+                            sprintf('%s error document %s', $code, $action),
+                            'created'
+                        );
+                    } else {
+                        DB::alteration_message(
+                            sprintf(
+                                '%s error document could not be %s. Please check permissions',
+                                $code, $action
+                            ),
+                            'error'
+                        );
+                    }
                 }
             }
         }
