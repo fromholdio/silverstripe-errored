@@ -12,7 +12,6 @@ use SilverStripe\Control\HTTPResponse;
 use SilverStripe\Control\NullHTTPRequest;
 use SilverStripe\Control\Session;
 use SilverStripe\Core\Convert;
-use SilverStripe\Core\Flushable;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Core\Path;
 use SilverStripe\i18n\i18n;
@@ -22,7 +21,7 @@ use SilverStripe\Security\Member;
 use SilverStripe\View\SSViewer;
 use Symfony\Component\Filesystem\Filesystem;
 
-class Errored extends Controller implements Flushable
+class Errored extends Controller
 {
     protected int $statusCode;
     protected ?string $errorMessage;
@@ -143,37 +142,51 @@ class Errored extends Controller implements Flushable
      * ----------------------------------------------------
      */
 
-    public static function flush()
-    {
-        self::writeAllStaticErrors(true);
-    }
-
-    public static function writeAllStaticErrors(bool $forceWrite = false): void
+    public static function writeAllStaticErrors(bool $forceWrite = false, bool $quiet = false): void
     {
         if (static::config()->get('is_static_file_enabled')) {
+
+            if (!$quiet) {
+                if (Director::is_cli()) {
+                    echo "\nCREATING STATIC ERROR PAGES\n\n";
+                } else {
+                    echo "\n<p><b>Creating static error pages</b></p><ul>\n\n";
+                }
+            }
+
             $codes = static::getCodes();
             foreach ($codes as $code => $title) {
                 $errored = static::create($code);
                 $staticExists = $errored->hasStaticFile();
                 if ($forceWrite || !$staticExists) {
-                    $action = $staticExists ? 'refreshed' : 'created';
                     $write = $errored->writeStaticFile();
-                    if ($write) {
-                        DB::alteration_message(
-                            sprintf('%s error document %s', $code, $action),
-                            'created'
-                        );
-                    } else {
-                        DB::alteration_message(
-                            sprintf(
-                                '%s error document could not be %s. Please check permissions',
-                                $code, $action
-                            ),
-                            'error'
-                        );
+                    if (!$quiet) {
+                        $action = $staticExists ? 'refreshed' : 'created';
+                        if ($write) {
+                            if (Director::is_cli()) {
+                                echo sprintf(" * %s error document %s\n", $code, $action);
+                            } else {
+                                echo sprintf("<li>%s error document %s</li>\n", $code, $action);
+                            }
+                        } else {
+                            if (Director::is_cli()) {
+                                echo sprintf(" * %s error document could not be %s. Please check permissions\n", $code, $action);
+                            } else {
+                                echo sprintf("<li>%s error document could not be %s. Please check permissions</li>\n", $code, $action);
+                            }
+                        }
                     }
                 }
             }
+
+            if (!$quiet) {
+                if (Director::is_cli()) {
+                    echo "\n Creating static error pages completed\n\n";
+                } else {
+                    echo "\n<p><b>Creating static error pages completed</b></p><ul>\n\n";
+                }
+            }
+
         }
     }
 

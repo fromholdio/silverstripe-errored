@@ -5,6 +5,10 @@ SilverStripe\Control\RequestHandler:
   extensions:
     fioErrored: Fromholdio\Errored\Extensions\ControllerExtension
 
+SilverStripe\ORM\DatabaseAdmin:
+  extensions:
+    fioErrored: Fromholdio\Errored\Extensions\DatabaseAdminExtension
+
 #Fromholdio\Errored\Errored:
 #  dev_append_error_message: true
 #  page_class: null
