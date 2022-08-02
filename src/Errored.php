@@ -313,7 +313,6 @@ class Errored extends Controller
             }
             $controller->setRequest($request);
             $controller->doInit();
-            $controller->pushCurrent();
         }
         $this->extend('updateResponsePageController', $controller, $request);
         return $controller;
