@@ -13,9 +13,8 @@
     "homepage": "https://fromhold.io"
   }],
   "require": {
-    "php": "^7.3 || ^8.0",
-    "silverstripe/vendor-plugin": "^1.0",
-    "silverstripe/cms": "^4.10.0"
+    "silverstripe/cms": "~4.10 || ~5.0",
+    "symfony/filesystem": "^6.1"
   },
   "replace": {
     "silverstripe/errorpage":"*"
