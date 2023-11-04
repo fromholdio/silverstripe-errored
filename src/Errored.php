@@ -290,7 +290,9 @@ class Errored extends Controller
     public function getStaticResponseBody(): ?string
     {
         $storeFileName = $this->getStoreStaticFileName();
-        $body = file_get_contents($storeFileName);
+        $body = file_exists($storeFileName)
+            ? file_get_contents($storeFileName)
+            : null;
         return empty($body) ? null : $body;
     }
 
