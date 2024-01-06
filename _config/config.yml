@@ -1,6 +1,7 @@
 ---
 Name: fio-errored
 ---
+
 SilverStripe\Control\RequestHandler:
   extensions:
     fioErrored: Fromholdio\Errored\Extensions\ControllerExtension
@@ -9,10 +10,36 @@ SilverStripe\ORM\DatabaseAdmin:
   extensions:
     fioErrored: Fromholdio\Errored\Extensions\DatabaseAdminExtension
 
-#Fromholdio\Errored\Errored:
-#  dev_append_error_message: true
-#  page_class: null
-#  themes:
-#    - '$public'
-#    - 'silverstripe/login-forms:login-forms'
-#    - '$default'
+SilverStripe\Core\Injector\Injector:
+  Monolog\Formatter\FormatterInterface.friendly:
+    class: Fromholdio\Errored\View\DebugViewFriendlyErroredFormatter
+    properties:
+      Title: "There has been an error"
+      Body: "The website server has not been able to respond to your request"
+
+Fromholdio\Errored\Errored:
+  dev_append_error_message: false
+
+---
+Name: fio-errored-dev
+After: fio-errored
+Only:
+  environment: dev
+---
+
+Fromholdio\Errored\Errored:
+  dev_append_error_message: true
+
+---
+Name: fio-errored-theme
+After: fio-errored
+Only:
+  moduleexists: silverstripe/login-forms
+---
+
+Fromholdio\Errored\Errored:
+  page_class: null
+  themes:
+    - '$public'
+    - 'silverstripe/login-forms:login-forms'
+    - '$default'
