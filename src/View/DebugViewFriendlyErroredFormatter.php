@@ -22,5 +22,4 @@ class DebugViewFriendlyErroredFormatter extends DebugViewFriendlyErrorFormatter
             return parent::output($statusCode);
         }
     }
-
 }

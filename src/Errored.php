@@ -84,8 +84,16 @@ class Errored extends Controller
             415 => _t(self::class . '.CODE_415', '415 - Unsupported Media Type'),
             416 => _t(self::class . '.CODE_416', '416 - Request Range Not Satisfiable'),
             417 => _t(self::class . '.CODE_417', '417 - Expectation Failed'),
+            418 => _t(self::class . '.CODE_418', '418 - I\'m a teapot'),
+            421 => _t(self::class . '.CODE_421', '421 - Misdirected Request'),
             422 => _t(self::class . '.CODE_422', '422 - Unprocessable Entity'),
+            423 => _t(self::class . '.CODE_423', '423 - Locked'),
+            424 => _t(self::class . '.CODE_424', '424 - Failed Dependency'),
+            425 => _t(self::class . '.CODE_425', '425 - Too Early'),
+            426 => _t(self::class . '.CODE_426', '426 - Upgrade Required'),
+            428 => _t(self::class . '.CODE_428', '428 - Precondition Required'),
             429 => _t(self::class . '.CODE_429', '429 - Too Many Requests'),
+            431 => _t(self::class . '.CODE_431', '431 - Request Header Fields Too Large'),
             451 => _t(self::class . '.CODE_451', '451 - Unavailable For Legal Reasons'),
             500 => _t(self::class . '.CODE_500', '500 - Internal Server Error'),
             501 => _t(self::class . '.CODE_501', '501 - Not Implemented'),
@@ -93,6 +101,11 @@ class Errored extends Controller
             503 => _t(self::class . '.CODE_503', '503 - Service Unavailable'),
             504 => _t(self::class . '.CODE_504', '504 - Gateway Timeout'),
             505 => _t(self::class . '.CODE_505', '505 - HTTP Version Not Supported'),
+            506 => _t(self::class . '.CODE_506', '506 - Variant Also Negotiates'),
+            507 => _t(self::class . '.CODE_507', '507 - Insufficient Storage'),
+            508 => _t(self::class . '.CODE_508', '508 - Loop Detected'),
+            510 => _t(self::class . '.CODE_510', '510 - Not Extended'),
+            511 => _t(self::class . '.CODE_511', '511 - Network Authentication Required'),
         ];
     }
 
@@ -329,7 +342,7 @@ class Errored extends Controller
         }
 
         $nullRequest = new NullHTTPRequest();
-        if (Controller::has_curr()) {
+        if (!is_null(Controller::curr())) {
             $curr = Controller::curr();
             if ($curr !== $this) {
                 return $curr->getRequest() ?? $nullRequest;

@@ -1,6 +1,8 @@
 # silverstripe-errored
 
-Flexible error page generation for Silverstripe 4 & 5+.
+Flexible error page generation for Silverstripe 6.x
+
+(For Silverstripe 4 & 5+ see 1.x.)
 
 - Set specific theme stack for error pages, for example use the silverstripe/login-forms security theme for error pages rather than the site global theme
 - Create templates for content of error pages, on a per error code basis, or per 4xx/5xx/etc basis

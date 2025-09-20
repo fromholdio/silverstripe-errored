@@ -6,7 +6,7 @@ use Fromholdio\Errored\Errored;
 use SilverStripe\Core\Extension;
 use SilverStripe\Core\Injector\Injector;
 
-class DatabaseAdminExtension extends Extension
+class DbBuildExtension extends Extension
 {
     public function onAfterBuild($quiet, $populate, $testMode)
     {
