@@ -16,7 +16,7 @@ class ErroredManager extends BuildTask
 
     protected string $title = 'Errored Manager';
 
-    protected static string $description = '';
+    protected static string $description = 'Manage static error documents';
 
     private static bool $is_enabled = true;
 
