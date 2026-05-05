@@ -1,0 +1,123 @@
+<?php
+
+namespace Fromholdio\Errored;
+
+use Fromholdio\ConfiguredMultisites\Model\Site;
+use Fromholdio\ConfiguredMultisites\Multisites;
+use SilverStripe\Control\Director;
+use SilverStripe\Control\HTTPRequest;
+use SilverStripe\Core\Path;
+
+class ConfiguredMultisitesErrored extends Errored
+{
+    protected ?Site $site;
+
+    public function __construct(
+        int $statusCode = 0,
+        ?HTTPRequest $request = null,
+        ?string $errorMessage = null,
+        ?string $userMessage = null
+    ) {
+        $this->setSite(Multisites::inst()->getCurrentSite());
+        parent::__construct($statusCode, $request, $errorMessage, $userMessage);
+    }
+
+    public function setSite(?Site $site): self
+    {
+        $this->site = $site;
+        return $this;
+    }
+
+    public function getSite(): Site
+    {
+        $site = $this->site;
+        if (empty($site)) {
+            $site = Site::get()->find('IsDefault', true);
+        }
+        return $site;
+    }
+
+    protected function getStoreStaticPath(): string
+    {
+        return Path::join(
+            PUBLIC_PATH,
+            $this->getStaticFilePath(),
+            $this->getSite()->getField('DevID')
+        );
+    }
+
+    protected function getThemes(): ?array
+    {
+        $themesPerSite = static::config()->get('site_themes');
+        $siteDevKey = $this->getSite()->getField('DevID');
+        $themes = $themesPerSite[$siteDevKey] ?? null;
+
+        return empty($themes) ? parent::getThemes() : $themes;
+    }
+
+    public static function writeAllStaticErrors(bool $forceWrite = false, bool $quiet = false): void
+    {
+        if (!static::config()->get('is_static_file_enabled')) {
+            return;
+        }
+
+        if (!$quiet) {
+            if (Director::is_cli()) {
+                echo "\nCREATING STATIC ERROR PAGES\n\n";
+            } else {
+                echo "\n<p><b>Creating static error pages</b></p><ul>\n\n";
+            }
+        }
+
+        $sites = Site::get();
+        $codes = static::getCodes();
+
+        foreach ($sites as $site) {
+            foreach ($codes as $code => $title) {
+                $errored = static::create($code);
+                $errored->setSite($site);
+                $staticExists = $errored->hasStaticFile();
+
+                if (!$forceWrite && $staticExists) {
+                    continue;
+                }
+
+                $write = $errored->writeStaticFile();
+
+                if ($quiet) {
+                    continue;
+                }
+
+                $action = $staticExists ? 'refreshed' : 'created';
+                if ($write) {
+                    $message = sprintf('%s error document %s', $code, $action);
+                } else {
+                    $message = sprintf(
+                        '%s error document could not be %s. Please check permissions',
+                        $code,
+                        $action
+                    );
+                }
+
+                if (Director::is_cli()) {
+                    echo sprintf(" * %s\n", $message);
+                } else {
+                    echo sprintf("<li>%s</li>\n", $message);
+                }
+            }
+        }
+
+        if (!$quiet) {
+            if (Director::is_cli()) {
+                echo "\nCreating static error pages completed\n\n";
+            } else {
+                echo "\n</ul><p><b>Creating static error pages completed</b></p>\n\n";
+            }
+        }
+    }
+
+    public function CurrentSite(): Site
+    {
+        return $this->getSite();
+    }
+}
