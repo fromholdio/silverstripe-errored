@@ -285,19 +285,26 @@ class Errored extends Controller
 
     public function getResponseBody(?HTTPRequest $request = null): string
     {
-        $controller = $this->getResponsePageController($request);
-        $templates = $this->getResponseTemplates();
-        $themes = $this->getThemes();
+        $previousThemes = SSViewer::get_themes();
 
-        if (!empty($themes)) {
-            SSViewer::set_themes($themes);
+        try {
+            $controller = $this->getResponsePageController($request);
+            $templates = $this->getResponseTemplates();
+            $themes = $this->getThemes();
+
+            if (!empty($themes)) {
+                SSViewer::set_themes($themes);
+            }
+
+            $body = is_null($controller)
+                ? $this->renderWith($templates)
+                : $controller->renderWith($templates);
+
+            return $body->forTemplate();
         }
-
-        $body = is_null($controller)
-            ? $this->renderWith($templates)
-            : $controller->renderWith($templates);
-
-        return $body->forTemplate();
+        finally {
+            SSViewer::set_themes($previousThemes);
+        }
     }
 
     public function getStaticResponseBody(): ?string
