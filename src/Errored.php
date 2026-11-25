@@ -288,16 +288,22 @@ class Errored extends Controller
         $controller = $this->getResponsePageController($request);
         $templates = $this->getResponseTemplates();
         $themes = $this->getThemes();
+        $previousThemes = SSViewer::get_themes();
 
         if (!empty($themes)) {
             SSViewer::set_themes($themes);
         }
 
-        $body = is_null($controller)
-            ? $this->renderWith($templates)
-            : $controller->renderWith($templates);
+        try {
+            $body = is_null($controller)
+                ? $this->renderWith($templates)
+                : $controller->renderWith($templates);
 
-        return $body->forTemplate();
+            return $body->forTemplate();
+        }
+        finally {
+            SSViewer::set_themes($previousThemes);
+        }
     }
 
     public function getStaticResponseBody(): ?string
